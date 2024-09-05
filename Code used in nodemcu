@@ -1,0 +1,77 @@
+ //e2742iot@gotgel.org
+ //Info@2024
+ #include <LCD_I2C.h>
+ LCD_I2C lcd(0x27, 16, 2); // Default address of most PCF8574 modules, change
+ according
+ #include <OneWire.h>
+ #include <DallasTemperature.h>
+ #define BLYNK_PRINT Serial
+ #include <ESP8266WiFi.h>
+ #include <BlynkSimpleEsp8266.h>
+ #define BLYNK_TEMPLATE_ID "TMPL3YA9GIdFR"
+ #define BLYNK_TEMPLATE_NAME "BATTERY COOLING SYSTEM"
+ #define BLYNK_AUTH_TOKEN "LUsy9L3hqjZuvG8pdrWP9F4CIc_qWPct"
+ char ssid[] = "IOT";
+ char pass[] = "123456789";
+ char auth[] = BLYNK_AUTH_TOKEN;
+ // Data wire is plugged into digital pin 2 on the Arduino
+ #define ONE_WIRE_BUS D5
+// Setup a oneWire instance to communicate with any OneWire device
+ OneWire oneWire(ONE_WIRE_BUS);
+ // Pass oneWire reference to DallasTemperature library
+ DallasTemperature sensors(&oneWire);
+ int deviceCount = 0;
+ float tempC1;
+ int tempval, tempcutval = 40, tempcutval2 = 45;
+ #define relay1 D6
+ float temperature, newtempvalue;
+ int modestat;
+ void setup(void)
+ {
+ sensors.begin(); // Start up the library
+ Serial.begin(9600);
+ lcd.begin(); // If you are using more I2C devices using the Wire library use
+ lcd.begin(false)
+ // this stop the library(LCD_I2C) from calling Wire.begin()
+ lcd.backlight();
+ lcd.setCursor(0, 0);
+ lcd.print("BATTERY COOLING");
+ lcd.setCursor(0, 1);
+ lcd.print(" SYSTEM");
+ deviceCount = sensors.getDeviceCount();
+ pinMode(relay1, OUTPUT);
+digitalWrite(relay1, HIGH);
+ Blynk.begin(auth, ssid, pass, "blynk.cloud", 80);
+ lcd.clear();
+ }
+ void loop(void)
+ {
+ // Send command to all the sensors for temperature conversion
+ sensors.requestTemperatures();
+ Serial.print(" SENSOR 1: ");
+ tempC1 = sensors.getTempCByIndex(0);
+ Serial.print(tempC1);
+ Serial.print((char)176);//shows degrees character
+ Serial.print("C | ");
+ Blynk.virtualWrite(V1, tempcutval);
+ Blynk.virtualWrite(V0, tempC1);
+ lcd.setCursor(0, 0);
+ lcd.print("T :");
+ lcd.print(tempC1);
+ lcd.setCursor(0, 1);
+lcd.print("TC :");
+ lcd.print(tempcutval);
+ if (tempC1 >= tempcutval)
+ {
+ digitalWrite(relay1, LOW);
+ }
+ else {
+ digitalWrite(relay1, HIGH);
+ }
+ Serial.println("");
+ delay(300);
+ }
+ BLYNK_WRITE(V2) {
+ int newtemp = param.asInt();
+ tempcutval = newtemp;
+ }
